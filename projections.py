@@ -10,8 +10,10 @@ Vector2 = Tuple[T, T]
 Vector2f = Vector2[float]
 Vector3 = Tuple[T, T, T]
 Vector3f = Vector3[float]
-LineSegment = Tuple[Vector3[T], Vector3[T]]
+LineSegment3 = Tuple[Vector3[T], Vector3[T]]
 LineSegment2 = Tuple[Vector2[T], Vector2[T]]
+LineSegment3f = LineSegment3[float]
+LineSegment2f = LineSegment2[float]
 
 
 def mult_vec(v: Vector3f, m: float) -> Vector3f:
@@ -111,7 +113,7 @@ class KeyboardEventHandler:
     def __init__(self):
         self.key_event_map = {}
 
-    
+
     def has_handler(self, key) -> bool:
         return key in self.key_event_map
 
@@ -137,12 +139,43 @@ class View:
         self.basis = plane.get_vectors(basis)
 
 
-    def project_point(self, point: Vector3) -> Vector2[int]:
+    def project_point(self, point: Vector3f) -> Vector2[int]:
         return tuple(map(round, decompose(self.plane.project_vector(point, self.point), self.basis))) # type: ignore
 
-    
+
+    def project_points(self, points: List[Vector3f]) -> List[Vector2[int]]:
+        return list(map(self.project_point, points))
+
+
     def move_point(self, v: Vector3f) -> None:
         self.point = sum_vec([self.point, v])
+
+
+class PrimitiveRenderer():
+    def __init__(self, screen) -> None:
+        self.screen = screen
+
+    
+    def draw_point(self, point: Vector2[int], color: Tuple[int, int, int] = (0, 0, 0), radius: int = 3) -> None:
+        pygame.draw.circle(self.screen, color, point, radius)
+
+
+    def draw_line_segment(self, segment: LineSegment2[int], color: Tuple[int, int, int] = (0, 0, 0), radius: int = 3) -> None:
+        draw_point(segment[0], color, radius)
+        draw_point(segment[1], color, radius)
+        pygame.draw.line(self.screen, color, segment[0], segment[1], radius)
+
+
+    def draw_polygon(self, polygon: List[LineSegment2[int]], color: Tuple[int, int, int] = (0, 0, 0), radius: int = 3) -> None:
+        if not points:
+            return
+
+        first = points[0]
+        for i in range(0, len(points)):
+            if i + 1 < len(points):
+                self.draw_line_segment((points[i], point[i + 1]), color, radius)
+            else:
+                self.draw_line_segment((points[i], first), color, radius)
 
 
 def adjust_view_point(key, view) -> None:
@@ -170,12 +203,12 @@ def main() -> None:
     font = pygame.font.SysFont("arial", 38)
 
     view = View((0.0, 0.0, 0.0), Plane((2, 2, 1), 0))
-    
-    a = (100.0, 50.0, 1.0)
-    b = (100.0, 200.0, 1.0)
-    c = (250.0, 200.0, 1.0)
-    d = (250.0, 50.0, 1.0)
-    
+
+    p1 = (100.0, 50.0, 1.0)
+    p2 = (100.0, 200.0, 1.0)
+    p3 = (250.0, 200.0, 1.0)
+    p4 = (250.0, 50.0, 1.0)
+
     view_control_keys = [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN, pygame.K_q, pygame.K_e]
 
     keyboard_event_handler = KeyboardEventHandler()
@@ -210,16 +243,11 @@ def main() -> None:
                     keyboard_event_handler.get_handler(e.key)()
 
 
-            p1 = view.project_point(a)
-            p2 = view.project_point(b)
-            p3 = view.project_point(c)
-            p4 = view.project_point(d)
-
-            square = [p1, p2, p3, p4]
+            shape = view.project_points([p1, p2, p3, p4])
 
             screen.fill(color["white"])
 
-            draw_polygon(square)
+            draw_polygon(shape)
 
             pygame.display.flip()
 
